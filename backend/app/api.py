@@ -23,10 +23,18 @@ async def analyze_emotion(request: MessageRequest):
 
         # ChatCompletion 사용
         response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "당신은 감정을 분석하는 전문가입니다."},
-                {"role": "user", "content": f'다음 메시지의 감정을 "기본, 화남, 즐거움, 슬픔, 바쁨" 중 하나로 분석해주세요:\n{combined_text}'}
+                {
+                    "role": "user",
+                    "content": (
+                        "다음 문장의 감정을 분석하고, 감정의 강도를 0에서 10 사이로 평가해주세요. "
+                        "가능한 결과: '기본', '화남', '즐거움', '슬픔', '바쁨' 중 하나이며, 강도와 함께 출력해주세요.\n\n"
+                        f"문장: {combined_text}\n"
+                        "결과는 JSON 형식으로 반환하세요. 예: {\"emotion\": \"화남\", \"intensity\": 7}"
+                    )
+                }
             ]
         )
         
