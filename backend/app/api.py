@@ -23,9 +23,8 @@ async def analyze_emotion(request: MessageRequest):
 
         # ChatCompletion 사용
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
-
                 {"role": "system", "content": "You are an expert in emotion analysis. Your task is to determine the most relevant emotion from the given text."},
                 {"role": "user", "content":f"""
                 ### Task:
@@ -50,7 +49,6 @@ async def analyze_emotion(request: MessageRequest):
                 ### Input:
                 {combined_text}
                 """}
-
             ]
         )
         
