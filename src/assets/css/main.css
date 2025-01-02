@@ -162,3 +162,31 @@
   width: 100px;
   height: 50px;
 }
+
+.selection-buttons {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.selection-buttons button {
+  margin: 0 5px;
+  padding: 10px 20px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.selection-buttons button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.selection-buttons button:hover {
+  background-color: #007bff;
+  color: white;
+}

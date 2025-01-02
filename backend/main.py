@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import router as api_router  # REST API 라우터
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
+from app.models.emotion_and_color import analyze_emotion_and_generate_colors
 from typing import List
 import json
 
@@ -16,8 +16,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# REST API 라우터 등록
-app.include_router(api_router, prefix="/api")
+# REST API 라우터 정의
+router = APIRouter()
+
+class MessageRequest(BaseModel):
+    messages: list
+
+@router.post("/analyze-colors")
+async def analyze_and_generate_colors(request: MessageRequest):
+    """
+    메시지를 분석하고 배경색을 생성
+    """
+    if not request.messages or len(request.messages) == 0:
+        raise HTTPException(status_code=400, detail="Messages cannot be empty")
+    
+    try:
+        result = await analyze_emotion_and_generate_colors(request.messages)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 라우터 등록
+app.include_router(router, prefix="/api")
 
 # WebSocket 연결 관리 클래스
 class ConnectionManager:
