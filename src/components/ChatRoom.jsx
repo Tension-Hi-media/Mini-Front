@@ -75,6 +75,23 @@ const ChatRoom = () => {
     setMessages((prev) => [...prev, reply]);
   };
 
+  const extractEmotion = (emotionString) => {
+    if (!emotionString) return null;
+    const match = emotionString.match(/^(.*?),/); 
+    return match ? match[1].trim() : null;        
+  };
+
+  const getEmotionColor = (emotion) => {
+    const emotionColors = {
+      "즐거움": "#fffccb", 
+      "화남": "#ffc3b1",   
+      "기본": "#dcf8c6", 
+      "슬픔": "#b1daff",   
+      "바쁨": "#D3D3D3" 
+    };
+    return emotionColors[emotion] || "#dcf8c6"; // 기본 색상
+  };
+
   return (
     <div className="chat-room">
       <div className="chat-window">
@@ -92,7 +109,7 @@ const ChatRoom = () => {
                 className="profile-image"
               />
             )}
-            <div className="message-bubble">
+            <div className="message-bubble" style={{ backgroundColor: getEmotionColor(extractEmotion(msg.emotion))}}>
               <div className="message-text">{msg.text}</div>
               <div className="message-time">
                 {msg.emotion ? `(${msg.emotion})` : "분석 중..."}
