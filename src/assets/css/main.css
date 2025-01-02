@@ -1,0 +1,128 @@
+.chat-room {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    height: 100vh;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    font-family: "Arial", sans-serif;
+}
+
+.chat-window {
+    flex: 1;
+    padding: 15px 10px;
+    background-color: #ffffff;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.message-container.mine {
+    justify-content: flex-end;
+}
+
+.message-container.other {
+    justify-content: flex-start;
+}
+
+.profile-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    font-size: 14px;
+    line-height: 1.4;
+    display: inline-block;
+    position: relative;
+}
+
+.message-container.mine .message-bubble {
+    background-color: #dcf8c6;
+    color: #000;
+}
+
+.message-container.other .message-bubble {
+    background-color: #ffffff;
+    color: #000;
+    border: 1px solid #e0e0e0;
+}
+
+.message-time {
+    font-size: 12px;
+    color: #888;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.chat-input {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: #f9f9f9;
+    border-top: 1px solid #ddd;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    font-size: 14px;
+    margin-right: 10px;
+    outline: none;
+}
+
+.chat-input button {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.chat-input button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}
+
+/* 스크롤바 스타일 */
+.chat-window::-webkit-scrollbar {
+    width: 5px;
+    /* 얇은 스크롤바 */
+    height: 5px;
+    /* 가로 스크롤바 */
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    /* 반투명 검정 */
+    border-radius: 10px;
+    /* 둥근 모서리 */
+}
+
+.chat-window::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+    /* 호버 시 더 진한 색 */
+}
+
+.chat-window::-webkit-scrollbar-track {
+    background: transparent;
+    /* 투명한 트랙 */
+}
