@@ -46,6 +46,7 @@ const ChatRoom = () => {
       return "기본"; // 기본값 반환
     }
   };
+  
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -107,11 +108,11 @@ const ChatRoom = () => {
     return () => ws.close();
   }, [username]);
 
-  const extractEmotion = (emotionString) => {
-    if (!emotionString) return null;
-    const match = emotionString.match(/^(.*?),/);
-    return match ? match[1].trim() : null;
-  };
+  // const extractEmotion = (emotionString) => {
+  //   if (!emotionString) return null;
+  //   const match = emotionString.match(/^(.*?),/);
+  //   return match ? match[1].trim() : null;
+  // };
   const formatTime = (date) => {
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
@@ -199,7 +200,7 @@ const ChatRoom = () => {
             <div
               className="message-bubble"
               style={{
-                backgroundColor: getEmotionColor(extractEmotion(msg.emotion)),
+                backgroundColor: getEmotionColor((msg.emotion)),
               }}
             >
               <div className="message-text">{msg.text}</div>
