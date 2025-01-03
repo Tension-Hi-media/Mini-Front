@@ -19,7 +19,7 @@ class MessageRequest(BaseModel):
 class ImageRequest(BaseModel):
     emotion: str
 
-@router.post("/analyze-colors")
+@router.post("/analyze")
 async def analyze_and_generate_colors(request: MessageRequest):
     """
     메시지를 분석하고 배경색을 생성
@@ -41,7 +41,6 @@ async def analyze_and_generate_colors(request: MessageRequest):
 
 @router.post("/createimage/")
 async def create_image_from_(request: ImageRequest):
-
     # 감정 문자열에서 첫 번째 단어만 추출
     emotion = request.emotion.split(",")[0].strip()  # ','로 분리하고 앞부분을 가져옴
 
@@ -54,13 +53,16 @@ async def create_image_from_(request: ImageRequest):
         emotion = 'joyful'
     elif emotion == '바쁨':
         emotion = 'busy'
+    elif emotion == '기본':
+        # 기본 감정일 경우 이미지 생성하지 않음
+        return JSONResponse(content={"message": "기본 감정은 이미지 생성이 필요하지 않습니다."})
 
     # 파이프라인 로드
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
     pipe.to(device)
 
     # 텍스트 프롬프트로 이미지 생성
-    prompt = f"a backgroud image that implies emotion of {emotion}"
+    prompt = f"a background image that implies emotion of {emotion}"
     print(prompt)
     image = pipe(prompt).images[0]
 

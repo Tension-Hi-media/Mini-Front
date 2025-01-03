@@ -20,7 +20,8 @@ const ChatRoom = () => {
   const [newMessage, setNewMessage] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const [socket, setSocket] = useState(null);
-  const [imgSrc,setImgSrc] = useState('')
+  const [imgSrc, setImgSrc] = useState("");
+  const [currentTime, setCurrentTime] = useState("");
 
   const getEmotionColor = (emotion) => {
     const emotionColors = {
@@ -45,6 +46,19 @@ const ChatRoom = () => {
       return "기본"; // 기본값 반환
     }
   };
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(
+        `${now.getHours().toString().padStart(2, "0")}:${now
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!username) {
@@ -92,22 +106,29 @@ const ChatRoom = () => {
 
     return () => ws.close();
   }, [username]);
+
   const extractEmotion = (emotionString) => {
     if (!emotionString) return null;
     const match = emotionString.match(/^(.*?),/);
     return match ? match[1].trim() : null;
   };
-
+  const formatTime = (date) => {
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
   // 메시지 보낼 때
   const sendMessage = async () => {
     if (!newMessage.trim() || !socket || socket.readyState !== WebSocket.OPEN) {
       return;
     }
+    const currentTime = new Date();
 
     const userMessage = {
       sender: username,
       text: newMessage,
       emotion: "분석 중...",
+      timestamp: currentTime.toISOString(),
     };
 
     // WebSocket을 통해 메시지 전송
@@ -131,9 +152,12 @@ const ChatRoom = () => {
 
     // API 호출하여 이미지 생성
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/createimage/", {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/createimage/",
+        {
           emotion: analyzedEmotion,
-      });
+        }
+      );
 
       const imageUrl = response.data.image;
       console.log(imageUrl);
@@ -141,21 +165,21 @@ const ChatRoom = () => {
       // let base64_to_imgsrc = Buffer.from(base64String, "base64").toString()
       // setImgSrc(base64_to_imgsrc)
       setImgSrc(imageUrl);
-
     } catch (error) {
-        console.error("Error creating image:", error);
+      console.error("Error creating image:", error);
     }
   };
 
   return (
     <div className="chat-room">
-      <div 
-      className="chat-window"
-      style={{
-        backgroundImage: imgSrc != '' ? `url(data:image/png;base64,${imgSrc})` : 'none',
-        backgroundSize: 'cover', // 배경 이미지가 전체를 덮도록 설정
-        backgroundPosition: 'center', // 배경 이미지의 위치 설정
-      }}
+      <div
+        className="chat-window"
+        style={{
+          backgroundImage:
+            imgSrc != "" ? `url(data:image/png;base64,${imgSrc})` : "none",
+          backgroundSize: "cover", // 배경 이미지가 전체를 덮도록 설정
+          backgroundPosition: "center", // 배경 이미지의 위치 설정
+        }}
       >
         {messages.map((msg, index) => (
           <div
@@ -185,7 +209,11 @@ const ChatRoom = () => {
                 </div>
               )}
             </div>
-
+            <span className="message-time">
+              {msg.timestamp
+                ? formatTime(new Date(msg.timestamp))
+                : formatTime(new Date())}
+            </span>
             {msg.sender === username && (
               <img
                 src={profileImage}
@@ -203,7 +231,7 @@ const ChatRoom = () => {
 
       <div className="chat-input">
         <input
-          type="text"z
+          type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="메시지를 입력하세요..."
