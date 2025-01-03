@@ -37,7 +37,7 @@ const analyzeEmotion = async (messagesToAnalyze) => {
     return response.data.emotion;
   } catch (error) {
     console.error("Error from FastAPI:", error);
-    return "기본"; // 기본 상태로 반환
+    return "기본"; // 기본 상태로 반환 ddd
   }
 };
 
