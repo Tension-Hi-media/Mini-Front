@@ -20,6 +20,7 @@ const ChatRoom = () => {
   const [newMessage, setNewMessage] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const [socket, setSocket] = useState(null);
+  const [imgSrc,setImgSrc] = useState('')
 
   const getEmotionColor = (emotion) => {
     const emotionColors = {
@@ -134,12 +135,12 @@ const ChatRoom = () => {
           emotion: analyzedEmotion,
       });
 
-      // 이미지 URL을 받아와서 처리할 수 있습니다.
-      // 예를 들어, 응답에서 이미지 URL을 가져올 수 있습니다.
-      const imageUrl = response.data;
+      const imageUrl = response.data.image;
       console.log(imageUrl);
 
-      // 여기서 imageUrl을 사용하여 상태 업데이트하거나, 메시지에 추가하는 등의 작업을 수행할 수 있습니다.
+      // let base64_to_imgsrc = Buffer.from(base64String, "base64").toString()
+      // setImgSrc(base64_to_imgsrc)
+      setImgSrc(imageUrl);
 
     } catch (error) {
         console.error("Error creating image:", error);
@@ -148,7 +149,14 @@ const ChatRoom = () => {
 
   return (
     <div className="chat-room">
-      <div className="chat-window">
+      <div 
+      className="chat-window"
+      style={{
+        backgroundImage: imgSrc != '' ? `url(data:image/png;base64,${imgSrc})` : 'none',
+        backgroundSize: 'cover', // 배경 이미지가 전체를 덮도록 설정
+        backgroundPosition: 'center', // 배경 이미지의 위치 설정
+      }}
+      >
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -187,11 +195,15 @@ const ChatRoom = () => {
             )}
           </div>
         ))}
+        {/* 생성된 이미지 표시
+        {imgSrc && (
+          <img src={`data:image/png;base64,${imgSrc}`} alt="Generated" style={{ width: '100%', height: 'auto' }} />
+        )} */}
       </div>
 
       <div className="chat-input">
         <input
-          type="text"
+          type="text"z
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="메시지를 입력하세요..."

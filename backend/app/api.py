@@ -73,7 +73,22 @@ async def analyze_emotion(request: MessageRequest):
 
 
 @router.post("/createimage/")
-async def create_image_from_(emotion: ImageRequest):
+async def create_image_from_(request: ImageRequest):
+
+    # 감정 문자열에서 첫 번째 단어만 추출
+    emotion = request.emotion.split(",")[0].strip()  # ','로 분리하고 앞부분을 가져옴
+
+    # 감정에 따라 영어로 변환
+    if emotion == '화남':
+        emotion = 'angry'
+    elif emotion == '슬픔':
+        emotion = 'sad'
+    elif emotion == '즐거움':
+        emotion = 'joyful'
+    elif emotion == '바쁨':
+        emotion = 'busy'
+    else:
+        emotion = 'calm'
 
     # 파이프라인 로드
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
@@ -81,7 +96,17 @@ async def create_image_from_(emotion: ImageRequest):
 
     # 텍스트 프롬프트로 이미지 생성
     prompt = f"a backgroud image that implies emotion of {emotion}"
+    print(prompt)
     image = pipe(prompt).images[0]
+
+    # /image 디렉토리 생성 (존재하지 않는 경우)
+    output_dir = "image"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # 이미지 저장
+    image_path = os.path.join(output_dir, f"{emotion}.png")
+    image.save(image_path)
     
     # 이미지를 메모리 버퍼에 저장
     buffer = io.BytesIO()
