@@ -14,6 +14,25 @@ const profileImages = {
   바쁨: "/images/busy.png",
 };
 
+const weatherBackgrounds = {
+  "clear sky": "url('/images/clear.gif')",
+  "few clouds": "url('/images/cloudy.gif')",
+  "scattered clouds": "url('/images/cloudy.gif')",
+  "broken clouds": "url('/images/cloudy.gif')",
+  "overcast clouds": "url('/images/cloudy.gif')",
+  "light rain": "url('/images/rain.gif')",
+  "moderate rain": "url('/images/rain.gif')",
+  "heavy intensity rain": "url('/images/rain.gif')",
+  "shower rain": "url('/images/rain.gif')",
+  "light snow": "url('/images/snow.gif')",
+  "heavy snow": "url('/images/snow.gif')",
+  sleet: "url('/images/snow.gif')",
+  "thunderstorm with light rain": "url('/images/thunderstorm.gif')",
+  "thunderstorm with heavy rain": "url('/images/thunderstorm.gif')",
+};
+
+const defaultBackground = "url('/images/defaultBg.jpg')";
+
 const ChatRoom = () => {
   const { username } = useParams();
   const [messages, setMessages] = useState([]);
@@ -22,6 +41,7 @@ const ChatRoom = () => {
   const [socket, setSocket] = useState(null);
   const [imgSrc, setImgSrc] = useState("");
   const [currentTime, setCurrentTime] = useState("");
+  const [background, setBackground] = useState(defaultBackground);
 
   const getEmotionColor = (emotion) => {
     const emotionColors = {
@@ -32,6 +52,32 @@ const ChatRoom = () => {
       바쁨: "#D3D3D3",
     };
     return emotionColors[emotion] || emotionColors["기본"];
+  };
+
+  const getWeatherDescription = async () => {
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/api/weather");
+      console.log("Weather API response:", response.data); // 디버깅용 출력
+      return response.data.weather_description; // `weather_description` 반환
+    } catch (error) {
+      console.error("Error fetching weather data:", error);
+      return null;
+    }
+  };
+
+  const handleWeatherBackground = async () => {
+    const description = await getWeatherDescription();
+    console.log("Weather description:", description); // 디버깅용 출력
+    if (description && weatherBackgrounds[description]) {
+      console.log("Setting background to:", weatherBackgrounds[description]);
+      setBackground(weatherBackgrounds[description]); // 날씨 배경 설정
+      setTimeout(() => {
+        console.log("Restoring default background");
+        setBackground(defaultBackground); // 기본 배경으로 복원
+      }, 10000); // 10초 후 기본 배경 복원
+    } else {
+      console.error("No matching background for description:", description);
+    }
   };
 
   // 감정 분석 함수
@@ -46,7 +92,7 @@ const ChatRoom = () => {
       return "기본"; // 기본값 반환
     }
   };
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -123,8 +169,8 @@ const ChatRoom = () => {
     if (!newMessage.trim() || !socket || socket.readyState !== WebSocket.OPEN) {
       return;
     }
-    const currentTime = new Date();
 
+    const currentTime = new Date();
     const userMessage = {
       sender: username,
       text: newMessage,
@@ -134,6 +180,11 @@ const ChatRoom = () => {
 
     // WebSocket을 통해 메시지 전송
     socket.send(JSON.stringify(userMessage));
+
+    // "날씨" 키워드 확인 및 배경 변경
+    if (newMessage.toLowerCase().includes("날씨")) {
+      await handleWeatherBackground();
+    }
 
     // REST API로 감정 분석 요청
     const analyzedEmotion = await analyzeEmotion(newMessage);
@@ -145,12 +196,6 @@ const ChatRoom = () => {
       )
     );
 
-    // 상대방에게도 업데이트된 메시지 전송
-    const updatedMessage = { ...userMessage, emotion: analyzedEmotion };
-    socket.send(JSON.stringify(updatedMessage));
-
-    setNewMessage(""); // 입력창 초기화
-
     // API 호출하여 이미지 생성
     try {
       const response = await axios.post(
@@ -161,14 +206,12 @@ const ChatRoom = () => {
       );
 
       const imageUrl = response.data.image;
-      console.log(imageUrl);
-
-      // let base64_to_imgsrc = Buffer.from(base64String, "base64").toString()
-      // setImgSrc(base64_to_imgsrc)
       setImgSrc(imageUrl);
     } catch (error) {
       console.error("Error creating image:", error);
     }
+
+    setNewMessage(""); // 입력창 초기화
   };
 
   return (
@@ -176,10 +219,12 @@ const ChatRoom = () => {
       <div
         className="chat-window"
         style={{
-          backgroundImage:
-            imgSrc != "" ? `url(data:image/png;base64,${imgSrc})` : "none",
-          backgroundSize: "cover", // 배경 이미지가 전체를 덮도록 설정
-          backgroundPosition: "center", // 배경 이미지의 위치 설정
+          backgroundImage: `${background}, ${
+            imgSrc !== "" ? `url(data:image/png;base64,${imgSrc})` : "none"
+          }`,
+          backgroundSize: "cover, cover", // 각 배경 이미지를 덮도록 설정
+          backgroundPosition: "center, center", // 각 배경의 위치 설정
+          backgroundRepeat: "no-repeat, no-repeat", // 배경 반복 방지
         }}
       >
         {messages.map((msg, index) => (
@@ -200,7 +245,7 @@ const ChatRoom = () => {
             <div
               className="message-bubble"
               style={{
-                backgroundColor: getEmotionColor((msg.emotion)),
+                backgroundColor: getEmotionColor(msg.emotion),
               }}
             >
               <div className="message-text">{msg.text}</div>
