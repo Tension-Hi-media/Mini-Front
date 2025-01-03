@@ -5,7 +5,6 @@
   max-width: 500px;
   margin: 0 auto;
   height: 100vh;
-  background-color: #f0f0f0;
   border: 1px solid #ddd;
   font-family: "Arial", sans-serif;
 }
@@ -13,7 +12,6 @@
 .chat-window {
   flex: 1;
   padding: 15px 10px;
-  background-color: #ffffff;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -125,4 +123,24 @@
 .chat-window::-webkit-scrollbar-track {
   background: transparent;
   /* 투명한 트랙 */
+}
+
+.weather-buttons {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  gap: 10px;
+}
+
+.weather-button {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.weather-button:hover {
+  background-color: #0056b3;
 }

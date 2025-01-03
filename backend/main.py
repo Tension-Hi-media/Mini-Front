@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import router as api_router  # api.py에서 가져옴
+from app.models import weather
 
 app = FastAPI()
 
@@ -15,6 +16,7 @@ app.add_middleware(
 
 # API 라우터 등록
 app.include_router(api_router, prefix="/api")
+app.include_router(weather.router)
 
 # 기본 경로 정의
 @app.get("/")
