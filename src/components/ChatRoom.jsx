@@ -39,9 +39,14 @@ const ChatRoom = () => {
   const [newMessage, setNewMessage] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const [socket, setSocket] = useState(null);
+
+  // 감정 기반 배경 (Base64 이미지)
   const [imgSrc, setImgSrc] = useState("");
+  // 현재 시각
   const [currentTime, setCurrentTime] = useState("");
-  const [background, setBackground] = useState(defaultBackground);
+
+  // 날씨 오버레이 배경
+  const [weatherOverlay, setWeatherOverlay] = useState("none");
 
   const getEmotionColor = (emotion) => {
     const emotionColors = {
@@ -54,29 +59,28 @@ const ChatRoom = () => {
     return emotionColors[emotion] || emotionColors["기본"];
   };
 
+  // 날씨 데이터 가져오기
   const getWeatherDescription = async () => {
     try {
       const response = await axios.get("http://127.0.0.1:8000/api/weather");
-      console.log("Weather API response:", response.data); // 디버깅용 출력
-      return response.data.weather_description; // `weather_description` 반환
+      return response.data.weather_description;
     } catch (error) {
       console.error("Error fetching weather data:", error);
       return null;
     }
   };
 
+  // 날씨 배경 설정
   const handleWeatherBackground = async () => {
     const description = await getWeatherDescription();
-    console.log("Weather description:", description); // 디버깅용 출력
     if (description && weatherBackgrounds[description]) {
-      console.log("Setting background to:", weatherBackgrounds[description]);
-      setBackground(weatherBackgrounds[description]); // 날씨 배경 설정
+      // 날씨 오버레이를 먼저 설정
+      setWeatherOverlay(weatherBackgrounds[description]);
+
+      // 5초 뒤에는 다시 "none"으로 복귀
       setTimeout(() => {
-        console.log("Restoring default background");
-        setBackground(defaultBackground); // 기본 배경으로 복원
-      }, 10000); // 10초 후 기본 배경 복원
-    } else {
-      console.error("No matching background for description:", description);
+        setWeatherOverlay("none");
+      }, 5000);
     }
   };
 
@@ -219,62 +223,77 @@ const ChatRoom = () => {
       <div
         className="chat-window"
         style={{
-          backgroundImage: `${background}, ${
-            imgSrc !== "" ? `url(data:image/png;base64,${imgSrc})` : "none"
-          }`,
-          backgroundSize: "cover, cover", // 각 배경 이미지를 덮도록 설정
-          backgroundPosition: "center, center", // 각 배경의 위치 설정
-          backgroundRepeat: "no-repeat, no-repeat", // 배경 반복 방지
+          position: "relative",
+          // 감정 기반 배경 (만약 imgSrc가 없으면 아예 none으로)
+          backgroundImage: imgSrc ? `url(data:image/png;base64,${imgSrc})` : "none",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`message-container ${
-              msg.sender === username ? "mine" : "other"
-            }`}
-          >
-            {msg.sender !== username && (
-              <img
-                src={profileImages["기본"][msg.sender] || "/images/other.jpg"}
-                alt={`${msg.sender}의 프로필`}
-                className="profile-image"
-              />
-            )}
-
+         {/* 날씨 오버레이를 위한 레이어 */}
+         <div
+          className="chat-back"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            // weatherOverlay가 "none"이면 투명 배경, 아니면 날씨 배경
+            background: weatherOverlay,
+            opacity: 0.8,
+            zIndex: 1,
+          }}
+        ></div>
+        <div className="chat-content">
+          {messages.map((msg, index) => (
             <div
-              className="message-bubble"
-              style={{
-                backgroundColor: getEmotionColor(msg.emotion),
-              }}
+              key={index}
+              className={`message-container ${
+                msg.sender === username ? "mine" : "other"
+              }`}
             >
-              <div className="message-text">{msg.text}</div>
-              {msg.emotion !== "분석 중..." && (
-                <div className="message-time">
-                  {msg.emotion ? `(${msg.emotion})` : ""}
-                </div>
+              {msg.sender !== username && (
+                <img
+                  src={profileImages["기본"][msg.sender] || "/images/other.jpg"}
+                  alt={`${msg.sender}의 프로필`}
+                  className="profile-image"
+                />
+              )}
+
+              <div
+                className="message-bubble"
+                style={{
+                  backgroundColor: getEmotionColor(msg.emotion),
+                }}
+              >
+                <div className="message-text">{msg.text}</div>
+                {msg.emotion !== "분석 중..." && (
+                  <div className="message-time">
+                    {msg.emotion ? `(${msg.emotion})` : ""}
+                  </div>
+                )}
+              </div>
+              <span className="message-time">
+                {msg.timestamp
+                  ? formatTime(new Date(msg.timestamp))
+                  : formatTime(new Date())}
+              </span>
+              {msg.sender === username && (
+                <img
+                  src={profileImage}
+                  alt="내 프로필"
+                  className="profile-image"
+                />
               )}
             </div>
-            <span className="message-time">
-              {msg.timestamp
-                ? formatTime(new Date(msg.timestamp))
-                : formatTime(new Date())}
-            </span>
-            {msg.sender === username && (
-              <img
-                src={profileImage}
-                alt="내 프로필"
-                className="profile-image"
-              />
-            )}
-          </div>
-        ))}
-        {/* 생성된 이미지 표시
+          ))}
+          {/* 생성된 이미지 표시
         {imgSrc && (
           <img src={`data:image/png;base64,${imgSrc}`} alt="Generated" style={{ width: '100%', height: 'auto' }} />
         )} */}
+        </div>
       </div>
-
       <div className="chat-input">
         <input
           type="text"
