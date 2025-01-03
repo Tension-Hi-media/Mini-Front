@@ -1,4 +1,3 @@
-# app/models/emotion.py
 import openai
 import os
 from dotenv import load_dotenv
@@ -13,12 +12,12 @@ async def analyze_emotion(messages: list) -> dict:
     """
     combined_text = "\n".join(messages)
     try:
-     # ChatCompletion 사용
+        # OpenAI ChatCompletion 사용
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert in emotion analysis. Your task is to determine the most relevant emotion from the given text."},
-                {"role": "user", "content":f"""
+                {"role": "user", "content": f"""
                 ### Task:
                 - Emotion Analysis with Intensity
 
@@ -36,15 +35,14 @@ async def analyze_emotion(messages: list) -> dict:
                 - Your response must be one of the five emotions above, written in 한국어.
                 - If the input text does not convey any recognizable emotion, respond with '기본'.
                 - Do not include any additional explanation, only respond with the emotion and intensity.
-                
 
                 ### Input:
                 {combined_text}
                 """}
             ]
         )
-        # OpenAI 응답에서 감정 추출
-        emotion = response['choices'][0]['message']['content'].strip()
-        return {"emotion": emotion}
+        # 감정 및 강도 추출
+        emotion_with_intensity = response['choices'][0]['message']['content'].strip()
+        return {"emotion_with_intensity": emotion_with_intensity}
     except openai.OpenAIError as e:
         raise Exception(f"OpenAI API 호출 실패: {str(e)}")

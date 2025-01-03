@@ -1,25 +1,41 @@
 from transformers import pipeline
+import re
 
 # Hugging Face 모델 로드
 color_generator = pipeline(
     "text2text-generation",
-    model="t5-small"  # Hugging Face에서 사용할 T5 모델
+    model="t5-small"
 )
-print(color_generator("Generate 3 HEX colors for happiness"))
+
 def generate_gradient_colors(emotion: str) -> list:
     """
-    감정을 기반으로 3가지 HEX 색상을 생성 (알록달록 배경용)
+    감정을 기반으로 3가지 HEX 색상을 생성합니다.
     """
     try:
-        prompt = f"Generate 3 HEX color codes for the emotion: {emotion}. Separate each color with a comma."
-        response = color_generator(prompt, max_length=20)
-        colors = response[0]["generated_text"].strip().split(",")  # 쉼표로 색상 분리
+        # 간결한 프롬프트 사용
+        prompt = f"List 3 valid HEX color codes for the emotion: {emotion}."
+        print(f"Prompt: {prompt}")
+
+        # Hugging Face 모델 호출
+        response = color_generator(prompt, max_length=30, num_return_sequences=1)
+        generated_text = response[0]["generated_text"]
+        print(f"Generated text: {generated_text}")
+
+        # 쉼표로 색상 분리
+        colors = [color.strip() for color in generated_text.split(",")]
 
         # 유효한 HEX 색상만 필터링
-        valid_colors = [color.strip() for color in colors if color.startswith("#") and len(color.strip()) == 7]
+        valid_colors = [
+            color for color in colors if re.match(r"^#([0-9a-fA-F]{6})$", color)
+        ]
 
         # 유효한 색상이 없을 경우 기본값 반환
-        return valid_colors if valid_colors else ["#FFFFFF", "#000000", "#CCCCCC"]
+        if not valid_colors:
+            print("No valid HEX colors found, returning default colors.")
+            return ["#FFFFFF", "#000000", "#CCCCCC"]
+
+        return valid_colors
     except Exception as e:
-        raise Exception(f"배경색 생성 실패: {str(e)}")
+        print(f"Error generating colors: {str(e)}")
+        return ["#FFFFFF", "#000000", "#CCCCCC"]
 

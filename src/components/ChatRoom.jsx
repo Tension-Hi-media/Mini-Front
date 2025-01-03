@@ -20,31 +20,17 @@ const ChatRoom = () => {
   const [newMessage, setNewMessage] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const [socket, setSocket] = useState(null);
-  const [selection, setSelection] = useState("color"); // 초기 선택: 배경색 변경
-  const [background, setBackground] = useState(""); // 배경 스타일
+  const [imgSrc,setImgSrc] = useState('')
 
-  const getEmotionColor = async (emotionString) => {
-    try {
-      // FastAPI에 POST 요청
-      const response = await axios.post("http://127.0.0.1:8000/api/analyze-colors", {
-        messages: [emotionString],
-      });
-      const { emotion, colors } = response.data; // FastAPI 응답 추출
-      console.log("Generated Emotion and Colors:", emotion, colors);
-  
-      // 반환된 첫 번째 색상을 사용
-      return colors.length > 0 ? colors[0] : "#FFFFFF";
-    } catch (error) {
-      console.error("Error generating colors from emotion:", error);
-      return "#FFFFFF"; // 기본값 반환
-    }
-  };
-  
-
-  const extractEmotion = (emotionString) => {
-    if (!emotionString) return null;
-    const match = emotionString.match(/^(.*?),/); // 감정 문자열에서 쉼표로 구분된 첫 번째 값을 추출
-    return match ? match[1].trim() : null;
+  const getEmotionColor = (emotion) => {
+    const emotionColors = {
+      즐거움: "#fffccb",
+      화남: "#ffc3b1",
+      기본: "#dcf8c6",
+      슬픔: "#b1daff",
+      바쁨: "#D3D3D3",
+    };
+    return emotionColors[emotion] || emotionColors["기본"];
   };
 
   // 감정 분석 함수
@@ -59,12 +45,6 @@ const ChatRoom = () => {
       return "기본"; // 기본값 반환
     }
   };
-  useEffect(() => {
-    console.log("Rendered Background Style:", {
-      backgroundColor: selection === "color" ? background : undefined,
-      backgroundImage: selection === "image" ? background : undefined,
-    });
-  }, [background, selection]); // 상태 변경 시마다 출력
 
   useEffect(() => {
     if (!username) {
@@ -80,11 +60,10 @@ const ChatRoom = () => {
     setSocket(ws);
 
     ws.onopen = () => console.log(`WebSocket connected as ${username}`);
-
-    ws.onmessage = async (event) => {
+    ws.onmessage = (event) => {
       try {
         const receivedMessage = JSON.parse(event.data);
-    
+
         // 중복 메시지 방지 및 업데이트
         setMessages((prev) => {
           if (
@@ -94,6 +73,7 @@ const ChatRoom = () => {
                 msg.sender === receivedMessage.sender
             )
           ) {
+            // 기존 메시지에서 감정을 업데이트
             return prev.map((msg) =>
               msg.text === receivedMessage.text &&
               msg.sender === receivedMessage.sender
@@ -103,29 +83,22 @@ const ChatRoom = () => {
           }
           return [...prev, receivedMessage];
         });
-    
-        // 배경 스타일 업데이트
-        if (selection === "color") {
-          const color = await getEmotionColor(receivedMessage.text);
-          console.log("Setting background color:", color);
-          setBackground(color); // 배경색 변경
-        } else if (selection === "image") {
-          const imageUrl =
-            `url(${profileImages[receivedMessage.emotion] || "/images/default.jpg"})`;
-          console.log("Setting background image:", imageUrl);
-          setBackground(imageUrl); // 배경 이미지 변경
-        }
       } catch (error) {
-        console.error("Error processing WebSocket message:", error);
+        console.error("Invalid JSON:", event.data);
       }
     };
-    
     ws.onerror = (error) => console.error("WebSocket Error:", error);
     ws.onclose = () => console.log("WebSocket connection closed.");
 
     return () => ws.close();
-  }, [username, selection]); // selection 변경 시 업데이트
+  }, [username]);
+  const extractEmotion = (emotionString) => {
+    if (!emotionString) return null;
+    const match = emotionString.match(/^(.*?),/);
+    return match ? match[1].trim() : null;
+  };
 
+  // 메시지 보낼 때
   const sendMessage = async () => {
     if (!newMessage.trim() || !socket || socket.readyState !== WebSocket.OPEN) {
       return;
@@ -135,7 +108,6 @@ const ChatRoom = () => {
       sender: username,
       text: newMessage,
       emotion: "분석 중...",
-      selection, // 선택한 모드 전달
     };
 
     // WebSocket을 통해 메시지 전송
@@ -156,42 +128,41 @@ const ChatRoom = () => {
     socket.send(JSON.stringify(updatedMessage));
 
     setNewMessage(""); // 입력창 초기화
+
+    // API 호출하여 이미지 생성
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/createimage/", {
+          emotion: analyzedEmotion,
+      });
+
+      const imageUrl = response.data.image;
+      console.log(imageUrl);
+
+      // let base64_to_imgsrc = Buffer.from(base64String, "base64").toString()
+      // setImgSrc(base64_to_imgsrc)
+      setImgSrc(imageUrl);
+
+    } catch (error) {
+        console.error("Error creating image:", error);
+    }
   };
 
   return (
-    <div
-      className="chat-room"
+    <div className="chat-room">
+      <div 
+      className="chat-window"
       style={{
-        backgroundColor: selection === "color" ? background : undefined,
-        backgroundImage: selection === "image" ? background : undefined,
-        backgroundSize: selection === "image" ? "cover" : undefined,
-        backgroundPosition: selection === "image" ? "center" : undefined,
-        transition: "background 0.5s ease",
+        backgroundImage: imgSrc != '' ? `url(data:image/png;base64,${imgSrc})` : 'none',
+        backgroundSize: 'cover', // 배경 이미지가 전체를 덮도록 설정
+        backgroundPosition: 'center', // 배경 이미지의 위치 설정
       }}
-    >
-
-      {/* 유저 선택 버튼 */}
-      <div className="selection-buttons">
-        <button
-          className={selection === "color" ? "active" : ""}
-          onClick={() => setSelection("color")}
-        >
-          배경색 변경
-        </button>
-        <button
-          className={selection === "image" ? "active" : ""}
-          onClick={() => setSelection("image")}
-        >
-          배경 이미지 변경
-        </button>
-      </div>
-
-      <div className="chat-window">
+      >
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`message-container ${msg.sender === username ? "mine" : "other"
-              }`}
+            className={`message-container ${
+              msg.sender === username ? "mine" : "other"
+            }`}
           >
             {msg.sender !== username && (
               <img
@@ -224,11 +195,15 @@ const ChatRoom = () => {
             )}
           </div>
         ))}
+        {/* 생성된 이미지 표시
+        {imgSrc && (
+          <img src={`data:image/png;base64,${imgSrc}`} alt="Generated" style={{ width: '100%', height: 'auto' }} />
+        )} */}
       </div>
 
       <div className="chat-input">
         <input
-          type="text"
+          type="text"z
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="메시지를 입력하세요..."
