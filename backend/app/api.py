@@ -82,7 +82,7 @@ async def create_image_from_(request: ImageRequest):
     if emotion == '화남':
         emotion = 'angry'
     elif emotion == '슬픔':
-        emotion = 'sad'
+        emotion = 'sadness'
     elif emotion == '즐거움':
         emotion = 'joyful'
     elif emotion == '바쁨':
@@ -95,7 +95,7 @@ async def create_image_from_(request: ImageRequest):
     pipe.to(device)
 
     # 텍스트 프롬프트로 이미지 생성
-    prompt = f"a serene and natural background image that evokes the emotion of {emotion}, featuring gentle landscapes and subtle colors that reflect the essence of {emotion}."
+    prompt = f"a serene and natural background image that evokes the emotion or situation of {emotion}, featuring gentle landscapes and subtle colors that reflect the essence of {emotion}."
     print(prompt)
     image = pipe(prompt).images[0]
 
