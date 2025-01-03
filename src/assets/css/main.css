@@ -26,36 +26,38 @@
 
 .message-container {
   display: flex;
-  align-items: flex-end; /* 프로필 이미지와 메시지 버블의 하단을 정렬 */
-  gap: 10px;
-  position: relative; /* 메시지 버블과 프로필 이미지를 고정적으로 배치 */
+  align-items: flex-end;
+  margin: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .message-container.mine {
-  justify-content: flex-end; /* 나의 메시지는 오른쪽 정렬 */
+  justify-content: flex-end;
 }
 
 .message-container.other {
-  justify-content: flex-start; /* 상대방 메시지는 왼쪽 정렬 */
+  justify-content: flex-start;
 }
 
 .profile-image {
   width: 40px;
   height: 40px;
-  border-radius: 50%; /* 둥근 프로필 이미지 */
-  flex-shrink: 0; /* 크기가 줄어들지 않도록 고정 */
-  position: relative; /* 다른 요소의 정렬에 영향을 받지 않음 */
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
 }
 
 .message-bubble {
-  max-width: 70%; /* 메시지 버블의 최대 너비 설정 */
+  max-width: 70%;
   padding: 10px 15px;
   border-radius: 15px;
   font-size: 14px;
   line-height: 1.4;
   display: inline-block;
-  position: relative; /* 메시지와 관련된 내부 요소 위치 지정 */
-  word-break: break-word; /* 긴 단어를 자동으로 줄바꿈 */
+  position: relative;
+  z-index: 1;
+  word-break: break-word;
 }
 
 .message-container.mine .message-bubble {
@@ -69,11 +71,22 @@
   border: 1px solid #e0e0e0;
 }
 
+.message-info {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  font-size: 12px;
+  color: #888;
+}
+
 .message-time {
   font-size: 12px;
   color: #888;
-  margin-top: 5px;
-  text-align: right;
+  position: relative;
+  z-index: 2;
+  margin: 0 5px;
+  white-space: nowrap;
+  align-self: flex-end;
 }
 
 .chat-input {
@@ -125,20 +138,20 @@
 
 /* 스크롤바 스타일 */
 .chat-window::-webkit-scrollbar {
-  width: 8px; /* 더 넓은 스크롤바 */
+  width: 8px;
 }
 
 .chat-window::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3); /* 반투명 검정 */
-  border-radius: 10px; /* 둥근 모서리 */
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
 }
 
 .chat-window::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.5); /* 호버 시 더 진한 색 */
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .chat-window::-webkit-scrollbar-track {
-  background: #f5f5f5; /* 트랙 색상 */
+  background: #f5f5f5;
 }
 
 /* 메시지 전송 애니메이션 */

@@ -2,10 +2,17 @@
 import openai
 import os
 from dotenv import load_dotenv
+from transformers import pipeline
 
 # .env 파일 로드
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# KoBERT나 KoELECTRA 기반 감정 분석 추가
+korean_sentiment = pipeline(
+    "sentiment-analysis",
+    model="beomi/KcELECTRA-base-v2022"  # 한국어 감정 분석에 특화된 모델
+)
 
 async def analyze_emotion(messages: list) -> dict:
     """
@@ -47,4 +54,14 @@ async def analyze_emotion(messages: list) -> dict:
         emotion = response['choices'][0]['message']['content'].strip()
         return {"emotion": emotion}
     except openai.OpenAIError as e:
-        raise Exception(f"OpenAI API 호출 실패: {str(e)}")
+        raise Exception(f"Op    enAI API 호출 실패: {str(e)}")
+
+async def analyze_emotion_with_transformer(text: str) -> dict:
+    """
+    Transformer 모델을 사용한 감정 분석 (OpenAI의 보조 또는 대체용)
+    """
+    try:
+        result = korean_sentiment(text)
+        return {"emotion": result[0]["label"]}
+    except Exception as e:
+        raise Exception(f"감정 분석 실패: {str(e)}")
