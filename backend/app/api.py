@@ -1,12 +1,21 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import openai
+import io
 import os
+import numpy as np
+import torch
+import base64
+from diffusers import StableDiffusionPipeline
 from dotenv import load_dotenv
 
 # .env 파일 로드
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# 디바이스 설정
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 router = APIRouter()
 
@@ -59,3 +68,25 @@ async def analyze_emotion(request: MessageRequest):
         raise HTTPException(status_code=500, detail=f"OpenAI API 호출 실패: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"내부 서버 오류 발생: {str(e)}")
+    
+@router.post("/createimage/")
+async def create_image_from_(emotion: str):
+
+    # 파이프라인 로드
+    pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
+    pipe.to(device)
+
+    # 텍스트 프롬프트로 날씨 이미지 생성
+    prompt = f"a backgroud image that implies emotion of {emotion}"
+    image = pipe(prompt).images[0]
+    
+    # 이미지를 메모리 버퍼에 저장
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    # Base64 인코딩
+    image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+
+    # 클라이언트에 이미지 데이터 반환
+    return JSONResponse(content={"image": image_base64})

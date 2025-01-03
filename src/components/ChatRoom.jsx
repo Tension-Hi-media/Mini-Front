@@ -97,6 +97,7 @@ const ChatRoom = () => {
     return match ? match[1].trim() : null;
   };
 
+  // 메시지 보낼 때
   const sendMessage = async () => {
     if (!newMessage.trim() || !socket || socket.readyState !== WebSocket.OPEN) {
       return;
@@ -126,6 +127,23 @@ const ChatRoom = () => {
     socket.send(JSON.stringify(updatedMessage));
 
     setNewMessage(""); // 입력창 초기화
+
+    // API 호출하여 이미지 생성
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/createimage/", {
+          emotion: analyzedEmotion,
+      });
+
+      // 이미지 URL을 받아와서 처리할 수 있습니다.
+      // 예를 들어, 응답에서 이미지 URL을 가져올 수 있습니다.
+      const imageUrl = response.data;
+      console.log(imageUrl);
+
+      // 여기서 imageUrl을 사용하여 상태 업데이트하거나, 메시지에 추가하는 등의 작업을 수행할 수 있습니다.
+
+    } catch (error) {
+        console.error("Error creating image:", error);
+    }
   };
 
   return (
