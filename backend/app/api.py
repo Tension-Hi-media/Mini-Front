@@ -21,6 +21,8 @@ router = APIRouter()
 
 class MessageRequest(BaseModel):
     messages: list
+class ImageRequest(BaseModel):
+    emotion: str
 
 @router.post("/analyze")
 async def analyze_emotion(request: MessageRequest):
@@ -68,15 +70,16 @@ async def analyze_emotion(request: MessageRequest):
         raise HTTPException(status_code=500, detail=f"OpenAI API 호출 실패: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"내부 서버 오류 발생: {str(e)}")
-    
+
+
 @router.post("/createimage/")
-async def create_image_from_(emotion: str):
+async def create_image_from_(emotion: ImageRequest):
 
     # 파이프라인 로드
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
     pipe.to(device)
 
-    # 텍스트 프롬프트로 날씨 이미지 생성
+    # 텍스트 프롬프트로 이미지 생성
     prompt = f"a backgroud image that implies emotion of {emotion}"
     image = pipe(prompt).images[0]
     
