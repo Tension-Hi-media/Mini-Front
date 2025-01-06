@@ -6,7 +6,7 @@ import "./../assets/css/main.css";
 const profileImages = {
   기본: {
     user1: "/images/user1_default.jpg",
-    user2: "/images/user2_default.jpg",
+    user2: "/images/user2_default.png",
   },
   화남: "/images/angry.png",
   즐거움: "/images/happy.png",
@@ -74,10 +74,7 @@ const ChatRoom = () => {
   const handleWeatherBackground = async () => {
     const description = await getWeatherDescription();
     if (description && weatherBackgrounds[description]) {
-      // 날씨 오버레이를 먼저 설정
       setWeatherOverlay(weatherBackgrounds[description]);
-
-      // 5초 뒤에는 다시 "none"으로 복귀
       setTimeout(() => {
         setWeatherOverlay("none");
       }, 5000);
@@ -90,10 +87,10 @@ const ChatRoom = () => {
       const response = await axios.post("http://127.0.0.1:8000/api/analyze", {
         messages: [text],
       });
-      return response.data.emotion; // 감정 결과 반환
+      return response.data.emotion;
     } catch (error) {
       console.error("Error analyzing emotion:", error);
-      return "기본"; // 기본값 반환
+      return "기본";
     }
   };
 
@@ -129,8 +126,14 @@ const ChatRoom = () => {
       try {
         const receivedMessage = JSON.parse(event.data);
 
+        // [변경] 만약 배경 이미지가 포함돼 있다면, setImgSrc 호출
+        if (receivedMessage.imgSrc) {
+          setImgSrc(receivedMessage.imgSrc);
+        }
         // 중복 메시지 방지 및 업데이트
         setMessages((prev) => {
+          // 만약 텍스트+감정만으로 중복 파악하는 로직이라면
+          // (여기에 id를 쓰면 더 좋음)
           if (
             prev.some(
               (msg) =>
@@ -158,16 +161,12 @@ const ChatRoom = () => {
     return () => ws.close();
   }, [username]);
 
-  // const extractEmotion = (emotionString) => {
-  //   if (!emotionString) return null;
-  //   const match = emotionString.match(/^(.*?),/);
-  //   return match ? match[1].trim() : null;
-  // };
   const formatTime = (date) => {
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}`;
   };
+
   // 메시지 보낼 때
   const sendMessage = async () => {
     if (!newMessage.trim() || !socket || socket.readyState !== WebSocket.OPEN) {
@@ -180,27 +179,23 @@ const ChatRoom = () => {
       text: newMessage,
       emotion: "분석 중...",
       timestamp: currentTime.toISOString(),
+      // [변경] 초기엔 imgSrc 없음
+      imgSrc: "",
     };
 
-    // WebSocket을 통해 메시지 전송
+    // (1) WebSocket으로 임시 메시지 전송: 상대방에게 “분석 중...” 표시
     socket.send(JSON.stringify(userMessage));
 
-    // "날씨" 키워드 확인 및 배경 변경
+    // (2) "날씨" 키워드 확인
     if (newMessage.toLowerCase().includes("날씨")) {
       await handleWeatherBackground();
     }
 
-    // REST API로 감정 분석 요청
+    // (3) 감정 분석
     const analyzedEmotion = await analyzeEmotion(newMessage);
 
-    // 메시지 상태 업데이트
-    setMessages((prev) =>
-      prev.map((msg, index) =>
-        index === prev.length - 1 ? { ...msg, emotion: analyzedEmotion } : msg
-      )
-    );
-
-    // API 호출하여 이미지 생성
+    // (4) 이미지 생성
+    let generatedImg = "";
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/api/createimage/",
@@ -208,14 +203,28 @@ const ChatRoom = () => {
           emotion: analyzedEmotion,
         }
       );
-
-      const imageUrl = response.data.image;
-      setImgSrc(imageUrl);
+      generatedImg = response.data.image;
     } catch (error) {
       console.error("Error creating image:", error);
     }
 
-    setNewMessage(""); // 입력창 초기화
+    // [변경] 최종 메시지(감정, imgSrc 업데이트)
+    const finalMessage = {
+      ...userMessage, // sender, text 등
+      emotion: analyzedEmotion,
+      imgSrc: generatedImg, // 여기서 서버로부터 받은 Base64 이미지
+    };
+
+    // (5) 최종 메시지를 WebSocket으로 전송해, 상대방에게도 최종 감정 & 배경이미지 전달
+    socket.send(JSON.stringify(finalMessage));
+
+    // 내 화면에 직접 적용
+    if (generatedImg) {
+      setImgSrc(generatedImg);
+    }
+
+    // 입력창 초기화
+    setNewMessage("");
   };
 
   return (
@@ -224,14 +233,14 @@ const ChatRoom = () => {
         className="chat-window"
         style={{
           position: "relative",
-          // 감정 기반 배경 (만약 imgSrc가 없으면 아예 none으로)
-          backgroundImage: imgSrc ? `url(data:image/png;base64,${imgSrc})` : "none",
+          backgroundImage: imgSrc
+            ? `url(data:image/png;base64,${imgSrc})`
+            : "none",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-         {/* 날씨 오버레이를 위한 레이어 */}
-         <div
+        <div
           className="chat-back"
           style={{
             position: "absolute",
@@ -239,7 +248,6 @@ const ChatRoom = () => {
             left: 0,
             width: "100%",
             height: "100%",
-            // weatherOverlay가 "none"이면 투명 배경, 아니면 날씨 배경
             background: weatherOverlay,
             opacity: 0.8,
             zIndex: 1,
@@ -288,10 +296,6 @@ const ChatRoom = () => {
               )}
             </div>
           ))}
-          {/* 생성된 이미지 표시
-        {imgSrc && (
-          <img src={`data:image/png;base64,${imgSrc}`} alt="Generated" style={{ width: '100%', height: 'auto' }} />
-        )} */}
         </div>
       </div>
       <div className="chat-input">
