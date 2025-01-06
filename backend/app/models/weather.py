@@ -1,16 +1,14 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 import requests
 
 router = APIRouter()
 
 @router.get("/api/weather")
-async def get_weather(city: str = Query(default="Seoul", description="도시 이름")):
-    """
-    특정 도시의 날씨 정보를 가져오는 API 엔드포인트
-    :param city: 사용자로부터 입력받은 도시 이름 (기본값: Seoul)
-    """
+async def get_weather():
+    
     API_KEY = "64aa169bc755802a193f9691bb884e93"
     BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+    city = "Seoul"
     url = f"{BASE_URL}?q={city}&appid={API_KEY}&units=metric"
 
     try:

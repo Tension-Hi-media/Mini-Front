@@ -71,11 +71,9 @@ const ChatRoom = () => {
   const [profileImage, setProfileImage] = useState(profileImages["기본"]);
   const [background, setBackground] = useState(defaultBackground);
 
-  const getWeatherDescription = async (cityName) => {
+  const getWeatherDescription = async () => {
     try {
-      const response = await axios.get(
-        `http://127.0.0.1:8000/api/weather?city=${cityName}`
-      );
+      const response = await axios.get("http://127.0.0.1:8000/api/weather");
 
       if (response.data.error) {
         console.error("Error from API:", response.data.error);
@@ -111,11 +109,9 @@ const ChatRoom = () => {
 
     setMessages((prev) => [...prev, userMessage]);
 
-    // 메시지에 "날씨" 키워드 포함 여부 확인
+    // "날씨" 키워드 입력 시 처리
     if (newMessage.toLowerCase().includes("날씨")) {
-      const cityName =
-        newMessage.split("날씨")[0].trim() || "서울"; // 도시명 추출, 기본값 서울
-      const weatherData = await getWeatherDescription(cityName);
+      const weatherData = await getWeatherDescription();
 
       if (weatherData) {
         const { description, temp, city } = weatherData;
@@ -123,7 +119,7 @@ const ChatRoom = () => {
           weatherTranslations[description] || description; // 한글 번역 적용
         const weatherResponse = {
           sender: "시스템",
-          text: `현재 ${city}의 날씨는 ${translatedDescription}이며, 온도는 ${temp}°C입니다.`,
+          text: `현재 날씨는 ${translatedDescription}이며, 온도는 ${temp}°C입니다.`,
           emotion: null,
         };
 
