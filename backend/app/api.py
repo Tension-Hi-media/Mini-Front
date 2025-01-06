@@ -12,6 +12,7 @@ import requests
 print(torch.cuda.is_available())  # True/False
 print(torch.cuda.device_count())  # 몇 개의 GPU가 있는지
 print(torch.cuda.get_device_name(0))  # GPU 모델명
+
 router = APIRouter()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
