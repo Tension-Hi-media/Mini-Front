@@ -8,11 +8,9 @@ import base64
 import io
 import os
 import numpy as np
+import requests
 
 router = APIRouter()
-
-# Stable Diffusion 모델 초기화
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class MessageRequest(BaseModel):
     messages: list
@@ -46,7 +44,7 @@ async def create_image_from_(request: ImageRequest):
 
     # 감정에 따라 영어로 변환
     if emotion == '화남':
-        emotion = 'angry'
+        emotion = 'upset'
     elif emotion == '슬픔':
         emotion = 'sad'
     elif emotion == '즐거움':
@@ -56,6 +54,9 @@ async def create_image_from_(request: ImageRequest):
     elif emotion == '기본':
         # 기본 감정일 경우 이미지 생성하지 않음
         return JSONResponse(content={"message": "기본 감정은 이미지 생성이 필요하지 않습니다."})
+    
+    # Stable Diffusion 모델 초기화
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # 파이프라인 로드
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
@@ -85,3 +86,19 @@ async def create_image_from_(request: ImageRequest):
 
     # 클라이언트에 이미지 데이터 반환
     return JSONResponse(content={"image": image_base64})
+
+@router.get("/weather")
+async def get_weather():
+    API_KEY = "64aa169bc755802a193f9691bb884e93"
+    BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+    city_name = "Seoul"
+    url = f"{BASE_URL}?q={city_name}&appid={API_KEY}&units=metric"
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "weather_description": data["weather"][0]["description"],
+            "temperature": data["main"]["temp"],
+        }
+    return {"error": "Unable to fetch weather data"}
