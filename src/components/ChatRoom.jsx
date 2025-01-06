@@ -34,18 +34,18 @@ const ChatRoom = () => {
     return emotionColors[emotion] || emotionColors["기본"];
   };
 
-  // 감정 분석 함수
   const analyzeEmotion = async (text) => {
     try {
       const response = await axios.post("http://127.0.0.1:8000/api/analyze", {
         messages: [text],
       });
-      return response.data.emotion; // 감정 결과 반환
+      return response.data.emotion;
     } catch (error) {
       console.error("Error analyzing emotion:", error);
-      return "기본"; // 기본값 반환
+      return "기본";
     }
   };
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -78,7 +78,6 @@ const ChatRoom = () => {
       try {
         const receivedMessage = JSON.parse(event.data);
 
-        // 중복 메시지 방지 및 업데이트
         setMessages((prev) => {
           if (
             prev.some(
@@ -87,7 +86,6 @@ const ChatRoom = () => {
                 msg.sender === receivedMessage.sender
             )
           ) {
-            // 기존 메시지에서 감정을 업데이트
             return prev.map((msg) =>
               msg.text === receivedMessage.text &&
               msg.sender === receivedMessage.sender
@@ -107,23 +105,19 @@ const ChatRoom = () => {
     return () => ws.close();
   }, [username]);
 
-  // const extractEmotion = (emotionString) => {
-  //   if (!emotionString) return null;
-  //   const match = emotionString.match(/^(.*?),/);
-  //   return match ? match[1].trim() : null;
-  // };
   const formatTime = (date) => {
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}`;
   };
-  // 메시지 보낼 때
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !socket || socket.readyState !== WebSocket.OPEN) {
       return;
     }
     const currentTime = new Date();
 
+    // Create initial message
     const userMessage = {
       sender: username,
       text: newMessage,
@@ -131,43 +125,63 @@ const ChatRoom = () => {
       timestamp: currentTime.toISOString(),
     };
 
-    // WebSocket을 통해 메시지 전송
+    // Immediately send the initial message
     socket.send(JSON.stringify(userMessage));
+    
+    // Clear input right away
+    setNewMessage("");
 
-    // REST API로 감정 분석 요청
-    const analyzedEmotion = await analyzeEmotion(newMessage);
+    // Start emotion analysis and image generation in parallel
+    Promise.all([
+      // Emotion analysis
+      (async () => {
+        try {
+          const analyzedEmotion = await analyzeEmotion(newMessage);
+          
+          // Update message with analyzed emotion
+          const updatedMessage = {
+            ...userMessage,
+            emotion: analyzedEmotion,
+          };
+          
+          // Send updated message with emotion
+          socket.send(JSON.stringify(updatedMessage));
+          
+          // Update local messages state
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.text === userMessage.text && msg.sender === username
+                ? { ...msg, emotion: analyzedEmotion }
+                : msg
+            )
+          );
 
-    // 메시지 상태 업데이트
-    setMessages((prev) =>
-      prev.map((msg, index) =>
-        index === prev.length - 1 ? { ...msg, emotion: analyzedEmotion } : msg
-      )
-    );
-
-    // 상대방에게도 업데이트된 메시지 전송
-    const updatedMessage = { ...userMessage, emotion: analyzedEmotion };
-    socket.send(JSON.stringify(updatedMessage));
-
-    setNewMessage(""); // 입력창 초기화
-
-    // API 호출하여 이미지 생성
-    try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/createimage/",
-        {
-          emotion: analyzedEmotion,
+          return analyzedEmotion;
+        } catch (error) {
+          console.error("Error analyzing emotion:", error);
+          return "기본";
         }
-      );
-
-      const imageUrl = response.data.image;
-      console.log(imageUrl);
-
-      // let base64_to_imgsrc = Buffer.from(base64String, "base64").toString()
-      // setImgSrc(base64_to_imgsrc)
-      setImgSrc(imageUrl);
-    } catch (error) {
-      console.error("Error creating image:", error);
-    }
+      })(),
+      
+      // Image generation (starts in parallel)
+      (async (emotion) => {
+        try {
+          const response = await axios.post(
+            "http://127.0.0.1:8000/api/createimage/",
+            {
+              emotion: emotion,
+            }
+          );
+          
+          const imageUrl = response.data.image;
+          setImgSrc(imageUrl);
+        } catch (error) {
+          console.error("Error creating image:", error);
+        }
+      })()
+    ]).catch(error => {
+      console.error("Error in parallel operations:", error);
+    });
   };
 
   return (
@@ -177,8 +191,8 @@ const ChatRoom = () => {
         style={{
           backgroundImage:
             imgSrc != "" ? `url(data:image/png;base64,${imgSrc})` : "none",
-          backgroundSize: "cover", // 배경 이미지가 전체를 덮도록 설정
-          backgroundPosition: "center", // 배경 이미지의 위치 설정
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
         {messages.map((msg, index) => (
@@ -223,10 +237,6 @@ const ChatRoom = () => {
             )}
           </div>
         ))}
-        {/* 생성된 이미지 표시
-        {imgSrc && (
-          <img src={`data:image/png;base64,${imgSrc}`} alt="Generated" style={{ width: '100%', height: 'auto' }} />
-        )} */}
       </div>
 
       <div className="chat-input">
