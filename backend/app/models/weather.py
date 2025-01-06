@@ -17,7 +17,6 @@ async def get_weather():
 
         data = response.json()
         return {
-            "city": city,
             "weather_description": data["weather"][0]["description"],
             "temperature": data["main"]["temp"],
         }

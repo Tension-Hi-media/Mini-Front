@@ -82,8 +82,7 @@ const ChatRoom = () => {
 
       return {
         description: response.data.weather_description,
-        temp: response.data.temperature,
-        city: response.data.city,
+        temp: Math.round(response.data.temperature), // 온도를 정수로 변환
       };
     } catch (error) {
       console.error("Error fetching weather data:", error);
@@ -114,7 +113,7 @@ const ChatRoom = () => {
       const weatherData = await getWeatherDescription();
 
       if (weatherData) {
-        const { description, temp, city } = weatherData;
+        const { description, temp } = weatherData;
         const translatedDescription =
           weatherTranslations[description] || description; // 한글 번역 적용
         const weatherResponse = {
