@@ -87,7 +87,7 @@ const ChatRoom = () => {
       const response = await axios.post("http://127.0.0.1:8000/api/analyze", {
         messages: [text],
       });
-      return response.data.emotion; 
+      return response.data.emotion;
     } catch (error) {
       console.error("Error analyzing emotion:", error);
       return "기본";
@@ -180,7 +180,7 @@ const ChatRoom = () => {
       emotion: "분석 중...",
       timestamp: currentTime.toISOString(),
       // [변경] 초기엔 imgSrc 없음
-      imgSrc: "", 
+      imgSrc: "",
     };
 
     // (1) WebSocket으로 임시 메시지 전송: 상대방에게 “분석 중...” 표시
@@ -197,9 +197,12 @@ const ChatRoom = () => {
     // (4) 이미지 생성
     let generatedImg = "";
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/createimage/", {
-        emotion: analyzedEmotion,
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/createimage/",
+        {
+          emotion: analyzedEmotion,
+        }
+      );
       generatedImg = response.data.image;
     } catch (error) {
       console.error("Error creating image:", error);
@@ -207,9 +210,9 @@ const ChatRoom = () => {
 
     // [변경] 최종 메시지(감정, imgSrc 업데이트)
     const finalMessage = {
-      ...userMessage,  // sender, text 등
+      ...userMessage, // sender, text 등
       emotion: analyzedEmotion,
-      imgSrc: generatedImg,  // 여기서 서버로부터 받은 Base64 이미지
+      imgSrc: generatedImg, // 여기서 서버로부터 받은 Base64 이미지
     };
 
     // (5) 최종 메시지를 WebSocket으로 전송해, 상대방에게도 최종 감정 & 배경이미지 전달

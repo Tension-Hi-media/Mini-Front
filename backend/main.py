@@ -55,6 +55,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 "sender": username,
                 "text": text,
                 "emotion": emotion,
+                "timestamp": message["timestamp"],  # <= 클라이언트에서 받은 값 그대로 삽입
                 "imgSrc": img_src,              # <-- 변경점
             }
             
