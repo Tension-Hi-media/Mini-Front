@@ -16,10 +16,13 @@ const profileImages = {
 
 const weatherBackgrounds = {
   "clear sky": "url('/images/clear.gif')",
-  "few clouds": "url('/images/cloudy.gif')",
-  "scattered clouds": "url('/images/cloudy.gif')",
-  "broken clouds": "url('/images/cloudy.gif')",
+  "few clouds": "url('/images/clear.gif')",
+  "scattered clouds": "url('/images/clear.gif')",
+  "broken clouds": "url('/images/clear.gif')",
   "overcast clouds": "url('/images/cloudy.gif')",
+  smoke: "url('/images/cloudy.gif')",
+  haze: "url('/images/cloudy.gif')",
+  fog: "url('/images/cloudy.gif')",
   "light rain": "url('/images/rain.gif')",
   "moderate rain": "url('/images/rain.gif')",
   "heavy intensity rain": "url('/images/rain.gif')",
@@ -32,6 +35,27 @@ const weatherBackgrounds = {
 };
 
 const defaultBackground = "url('/images/defaultBg.jpg')";
+// 날씨 번역 테이블
+
+const weatherTranslations = {
+  "clear sky": "맑음",
+  "few clouds": "약간 흐림",
+  "scattered clouds": "흐림",
+  "broken clouds": "흐림",
+  "overcast clouds": "흐림",
+  smoke: "스모그",
+  haze: "안개",
+  fog: "안개",
+  "light rain": "비",
+  "moderate rain": "비",
+  "heavy intensity rain": "폭우",
+  "shower rain": "소나기",
+  "light snow": "눈",
+  "heavy snow": "눈",
+  sleet: "진눈깨비",
+  "thunderstorm with light rain": "천둥번개",
+  "thunderstorm with heavy rain": "천둥번개",
+};
 
 const ChatRoom = () => {
   const { username } = useParams();
@@ -47,6 +71,8 @@ const ChatRoom = () => {
 
   // 날씨 오버레이 배경
   const [weatherOverlay, setWeatherOverlay] = useState("none");
+  // **상단에 표시할 날씨 정보**
+  const [weatherInfo, setWeatherInfo] = useState("");
 
   const getEmotionColor = (emotion) => {
     const emotionColors = {
@@ -60,10 +86,11 @@ const ChatRoom = () => {
   };
 
   // 날씨 데이터 가져오기
-  const getWeatherDescription = async () => {
+  const getWeatherData = async () => {
     try {
       const response = await axios.get("http://127.0.0.1:8000/api/weather");
-      return response.data.weather_description;
+      return response.data; 
+      // 예: { weather_description: "light rain", temperature: 23.4 }
     } catch (error) {
       console.error("Error fetching weather data:", error);
       return null;
@@ -71,9 +98,30 @@ const ChatRoom = () => {
   };
 
   // 날씨 배경 설정
-  const handleWeatherBackground = async () => {
-    const description = await getWeatherDescription();
-    if (description && weatherBackgrounds[description]) {
+const handleWeatherBackground = async () => {
+    const data = await getWeatherData();
+    if (!data || data.error) {
+      console.error("Cannot fetch weather data or got an error");
+      return;
+    }
+
+    // 날씨 설명(영문)
+    const description = data.weather_description || "";
+    // 온도
+    const temp = Math.round(data.temperature || 0);
+
+    // 한글 변환
+    const krDesc = weatherTranslations[description] || description;
+    // 상단 표시용
+    setWeatherInfo(`현재 날씨: ${krDesc}, 온도: ${temp}°C`);
+
+    // **일정 시간 후에 사라지도록**
+    setTimeout(() => {
+      setWeatherInfo("");
+    }, 5000); // 5초 뒤에 초기화
+
+    // 날씨 배경(오버레이)도 5초간 표시
+    if (weatherBackgrounds[description]) {
       setWeatherOverlay(weatherBackgrounds[description]);
       setTimeout(() => {
         setWeatherOverlay("none");
@@ -229,6 +277,14 @@ const ChatRoom = () => {
 
   return (
     <div className="chat-room">
+      <div className="chat-header">
+        {/* 날씨 정보가 있으면 표시 (5초 지나면 사라짐) */}
+        {weatherInfo && (
+          <div className="weather-info" style={{ marginTop: "10px" }}>
+            {weatherInfo}
+          </div>
+        )}
+      </div>
       <div
         className="chat-window"
         style={{

@@ -97,5 +97,8 @@ async def get_weather():
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        return {"weather_description": data["weather"][0]["description"]}
+        return {
+            "weather_description": data["weather"][0]["description"],
+            "temperature": data["main"]["temp"],
+        }
     return {"error": "Unable to fetch weather data"}
