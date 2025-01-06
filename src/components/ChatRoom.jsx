@@ -190,10 +190,13 @@ const ChatRoom = () => {
     if (newMessage.toLowerCase().includes("날씨")) {
       await handleWeatherBackground();
     }
+    
+    // 입력창 초기화
+    setNewMessage("");
 
     // (3) 감정 분석
     const analyzedEmotion = await analyzeEmotion(newMessage);
-
+    
     // (4) 이미지 생성
     let generatedImg = "";
     try {
@@ -222,9 +225,6 @@ const ChatRoom = () => {
     if (generatedImg) {
       setImgSrc(generatedImg);
     }
-
-    // 입력창 초기화
-    setNewMessage("");
   };
 
   return (
