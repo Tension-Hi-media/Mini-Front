@@ -54,12 +54,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             await manager.broadcast(response_message)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        disconnect_message = {
-            "sender": "System",
-            "text": f"{username}님이 나갔습니다.",
-            "emotion": "기본",
-        }
-        await manager.broadcast(disconnect_message)
 
 # 기본 경로
 @app.get("/")
