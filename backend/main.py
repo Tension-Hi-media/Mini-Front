@@ -1,25 +1,23 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.api import router as api_router  # REST API 라우터
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from typing import List
+from fastapi.middleware.cors import CORSMiddleware
+from app.api import router as api_router
 import json
+from typing import List
 
 app = FastAPI()
 
-# CORS 설정 (React와 통신 허용)
+# CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React 프론트엔드 주소
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 # REST API 라우터 등록
 app.include_router(api_router, prefix="/api")
 
-# WebSocket 연결 관리 클래스
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -36,34 +34,37 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(json_message)
 
-
 manager = ConnectionManager()
 
-# WebSocket 엔드포인트 정의
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
-    await manager.connect(websocket)
     try:
+        await manager.connect(websocket)
         while True:
             data = await websocket.receive_text()
-            message = json.loads(data)  # 메시지를 JSON으로 파싱
-            emotion = message.get("emotion", "기본")  # 감정 키 가져오기
+            message = json.loads(data)
+
+            # 클라이언트에서 보내는 모든 필드를 확인
+            # (text, emotion, imgSrc, etc.)
+
+            text = message.get("text", "")
+            emotion = message.get("emotion", "기본")
+            img_src = message.get("imgSrc", "")  # <-- 변경점
+
             response_message = {
                 "sender": username,
-                "text": message["text"],
+                "text": text,
                 "emotion": emotion,
+                "timestamp": message["timestamp"],  # <= 클라이언트에서 받은 값 그대로 삽입
+                "imgSrc": img_src,              # <-- 변경점
             }
+            
+            # 모든 연결에 브로드캐스트
             await manager.broadcast(response_message)
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        disconnect_message = {
-            "sender": "System",
-            "text": f"{username}님이 나갔습니다.",
-            "emotion": "기본",
-        }
-        await manager.broadcast(disconnect_message)
 
-# 기본 경로 정의
 @app.get("/")
 async def root():
     return {"message": "FastAPI 서버가 정상적으로 실행 중입니다."}

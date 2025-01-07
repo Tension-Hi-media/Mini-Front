@@ -1,61 +1,115 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import openai
+from app.models.emotion_and_color import analyze_emotion_and_generate_colors
+from diffusers import StableDiffusionPipeline
+import torch
+import base64
+import io
 import os
-from dotenv import load_dotenv
+import numpy as np
+import requests
+print(torch.cuda.is_available())
+def check_gpu():
+    # GPU 사용 가능 여부
+    can_use_gpu = torch.cuda.is_available()
+    if can_use_gpu:
+        print("GPU 사용 가능: cuda 디바이스를 사용할 수 있습니다.")
+    else:
+        print("GPU 사용 불가: CPU만 사용 가능합니다.")
 
-# .env 파일 로드
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+check_gpu()
 
 router = APIRouter()
 
 class MessageRequest(BaseModel):
     messages: list
 
+class ImageRequest(BaseModel):
+    emotion: str
+
+# Stable Diffusion 모델 초기화
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# 파이프라인 로드
+# Stable Diffusion 모델 로드 (FP16, GPU 사용)
+#  - 만약 "variant='fp16'" 버전이 존재하지 않는 모델이면 `revision='fp16', torch_dtype=torch.float16` 방식으로도 시도 가능
+pipe = StableDiffusionPipeline.from_pretrained(
+    "CompVis/stable-diffusion-v1-4",
+    revision="fp16",           # FP16 가중치
+    torch_dtype=torch.float16  # 반정밀도 사용
+).to(device)
+
 @router.post("/analyze")
-async def analyze_emotion(request: MessageRequest):
+async def analyze_and_generate_colors(request: MessageRequest):
+    """
+    메시지를 분석하고 배경색을 생성
+    """
     if not request.messages or len(request.messages) == 0:
         raise HTTPException(status_code=400, detail="Messages cannot be empty")
-
+    
     try:
-        combined_text = "\n".join(request.messages)
-
-        # ChatCompletion 사용
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in emotion analysis. Your task is to determine the most relevant emotion from the given text."},
-                {"role": "user", "content":f"""
-                ### Task:
-                - Emotion Analysis with Intensity
-
-                ### Instructions:
-                1. Analyze the given text and return one of the following five emotions:
-                - 기본
-                - 화남
-                - 즐거움
-                - 슬픔
-                - 바쁨
-                2. The intensity of the emotion as a number between 0 and 10, where 0 means no emotion and 10 means very intense emotion.
-
-                ### Rule:
-                - Based on the context of the text, select the most appropriate single emotion.
-                - Your response must be one of the five emotions above, written in 한국어.
-                - If the input text does not convey any recognizable emotion, respond with '기본'.
-                - Do not include any additional explanation, only respond with the emotion and intensity.
-                
-
-                ### Input:
-                {combined_text}
-                """}
-            ]
-        )
-        
-        # 응답에서 감정 추출
-        emotion = response['choices'][0]['message']['content'].strip()
-        return {"emotion": emotion}
-    except openai.OpenAIError as e:  # 올바른 예외 처리
-        raise HTTPException(status_code=500, detail=f"OpenAI API 호출 실패: {str(e)}")
+        # 감정 분석 및 배경색 생성
+        result = await analyze_emotion_and_generate_colors(request.messages)
+        response = {
+            "status": "success",
+            "emotion": result.get("emotion", "기본"),
+            "colors": result.get("colors", ["#FFFFFF", "#000000", "#CCCCCC"]),
+        }
+        return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"내부 서버 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/createimage/")
+async def create_image_from_(request: ImageRequest):
+    emotion = request.emotion.split(",")[0].strip()
+
+    # 감정에 따라 영어로 변환
+    if emotion == '화남':
+        emotion = 'upset'
+    elif emotion == '슬픔':
+        emotion = 'sad'
+    elif emotion == '즐거움':
+        emotion = 'joyful'
+    elif emotion == '바쁨':
+        emotion = 'busy'
+    elif emotion == '기본':
+        return JSONResponse(content={"message": "기본 감정은 이미지 생성이 필요하지 않습니다."})
+    # GPU 메모리 확보하기 위한 캐시 삭제
+    torch.cuda.empty_cache()
+
+    # # 텍스트 프롬프트로 이미지 생성
+    # prompt = f"a simple image that evokes the emotion of {emotion}, featuring monotonous colors that reflect the essence of {emotion}."
+    prompt = f"a simple emoji of {emotion}"
+    print(prompt)
+    image = pipe(prompt).images[0]
+
+    output_dir = "image"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    image_path = os.path.join(output_dir, f"{emotion}.png")
+    image.save(image_path)
+    
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    return JSONResponse(content={"image": image_base64})
+
+@router.get("/weather")
+async def get_weather():
+    API_KEY = "64aa169bc755802a193f9691bb884e93"
+    BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+    city_name = "Seoul"
+    url = f"{BASE_URL}?q={city_name}&appid={API_KEY}&units=metric"
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "weather_description": data["weather"][0]["description"],
+            "temperature": data["main"]["temp"],
+        }
+    return {"error": "Unable to fetch weather data"}
