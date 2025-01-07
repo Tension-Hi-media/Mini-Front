@@ -17,6 +17,13 @@ class MessageRequest(BaseModel):
 class ImageRequest(BaseModel):
     emotion: str
 
+# Stable Diffusion 모델 초기화
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# 파이프라인 로드
+pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
+pipe.to(device)
+
 @router.post("/analyze")
 async def analyze_and_generate_colors(request: MessageRequest):
     """
@@ -54,16 +61,15 @@ async def create_image_from_(request: ImageRequest):
     elif emotion == '기본':
         # 기본 감정일 경우 이미지 생성하지 않음
         return JSONResponse(content={"message": "기본 감정은 이미지 생성이 필요하지 않습니다."})
-    
-    # Stable Diffusion 모델 초기화
-    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # 파이프라인 로드
-    pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
-    pipe.to(device)
+    # GPU 메모리 확보하기 위한 캐시 삭제
+    torch.cuda.empty_cache()
 
-    # 텍스트 프롬프트로 이미지 생성
-    prompt = f"a background image that implies emotion of {emotion}"
+    print(torch.cuda.is_available())
+
+    # # 텍스트 프롬프트로 이미지 생성
+    # prompt = f"a simple image that evokes the emotion of {emotion}, featuring monotonous colors that reflect the essence of {emotion}."
+    prompt = f"a simple emoji of {emotion}"
     print(prompt)
     image = pipe(prompt).images[0]
 
