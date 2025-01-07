@@ -9,11 +9,22 @@ import io
 import os
 import numpy as np
 import requests
+print(torch.cuda.is_available())
+def check_gpu():
+    # GPU 사용 가능 여부
+    can_use_gpu = torch.cuda.is_available()
+    if can_use_gpu:
+        print("GPU 사용 가능: cuda 디바이스를 사용할 수 있습니다.")
+    else:
+        print("GPU 사용 불가: CPU만 사용 가능합니다.")
+
+check_gpu()
 
 router = APIRouter()
 
 class MessageRequest(BaseModel):
     messages: list
+
 class ImageRequest(BaseModel):
     emotion: str
 
@@ -21,8 +32,13 @@ class ImageRequest(BaseModel):
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # 파이프라인 로드
-pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
-pipe.to(device)
+# Stable Diffusion 모델 로드 (FP16, GPU 사용)
+#  - 만약 "variant='fp16'" 버전이 존재하지 않는 모델이면 `revision='fp16', torch_dtype=torch.float16` 방식으로도 시도 가능
+pipe = StableDiffusionPipeline.from_pretrained(
+    "CompVis/stable-diffusion-v1-4",
+    revision="fp16",           # FP16 가중치
+    torch_dtype=torch.float16  # 반정밀도 사용
+).to(device)
 
 @router.post("/analyze")
 async def analyze_and_generate_colors(request: MessageRequest):
@@ -46,8 +62,7 @@ async def analyze_and_generate_colors(request: MessageRequest):
 
 @router.post("/createimage/")
 async def create_image_from_(request: ImageRequest):
-    # 감정 문자열에서 첫 번째 단어만 추출
-    emotion = request.emotion.split(",")[0].strip()  # ','로 분리하고 앞부분을 가져옴
+    emotion = request.emotion.split(",")[0].strip()
 
     # 감정에 따라 영어로 변환
     if emotion == '화남':
@@ -59,13 +74,9 @@ async def create_image_from_(request: ImageRequest):
     elif emotion == '바쁨':
         emotion = 'busy'
     elif emotion == '기본':
-        # 기본 감정일 경우 이미지 생성하지 않음
         return JSONResponse(content={"message": "기본 감정은 이미지 생성이 필요하지 않습니다."})
-
     # GPU 메모리 확보하기 위한 캐시 삭제
     torch.cuda.empty_cache()
-
-    print(torch.cuda.is_available())
 
     # # 텍스트 프롬프트로 이미지 생성
     # prompt = f"a simple image that evokes the emotion of {emotion}, featuring monotonous colors that reflect the essence of {emotion}."
@@ -73,24 +84,18 @@ async def create_image_from_(request: ImageRequest):
     print(prompt)
     image = pipe(prompt).images[0]
 
-    # /image 디렉토리 생성 (존재하지 않는 경우)
     output_dir = "image"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # 이미지 저장
     image_path = os.path.join(output_dir, f"{emotion}.png")
     image.save(image_path)
     
-    # 이미지를 메모리 버퍼에 저장
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     buffer.seek(0)
 
-    # Base64 인코딩
     image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
-
-    # 클라이언트에 이미지 데이터 반환
     return JSONResponse(content={"image": image_base64})
 
 @router.get("/weather")
